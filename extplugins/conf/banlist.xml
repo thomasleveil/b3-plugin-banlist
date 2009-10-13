@@ -1,0 +1,88 @@
+<configuration plugin="banlist">
+
+    <settings name="global_settings">
+        <!-- level from which players won't be checked, thus never be kicked. (default: 100) -->
+        <set name="immunity_level">100</set>
+        
+        <!-- do you want to update banlists that provide an URL automatically every hour ? (default: yes) -->
+        <set name="auto_update">yes</set>
+    </settings>
+
+    <settings name="commands">
+        <!-- Command to list all loaded lists -->
+        <set name="banlistinfo-blinfo">100</set>
+        
+        <!-- Command to update all lists from their URL (if any) -->
+        <set name="banlistupdate-blupdate">100</set>
+        
+        <!-- Command to force checking of connected players -->
+        <set name="banlistcheck-blcheck">100</set>
+    </settings>
+	
+	<!--
+	You can define as much banlist files as you want. 
+	banlists can be of 4 types : ip banlist, ip whitelist, guid banlist or guid whitelist
+	Each banlist definition contains the following information :
+	* name : the name of the banlist, will be used as a reason for the kick (useful to find them in Echelon)
+	* file : the path to the banlist file.
+		- ip banlist : a file containing ip to ban, compatible with quake3 banlist format. If an ip ends with ".0", the full range will be banned. Lines stating with "//" will be ignored.
+		- guid banlist : a file containing guid to ban. Lines stating with "//" will be ignored.
+	* message : an optional message that will be displayed in game. Keywords that can be used : $id, $ip, $guid, $name
+		- NOTE:  the ban message is only visible to other players. The banned player WILL NOT SEE that message as it is kicked before having a chance to load the map.
+	* url : an optional url from where the banlist file will be updated hourly
+	* force_ip_range : yes/no. If yes all IPs will be read as if they were ending with '.0'
+	-->
+	
+	<ip_banlist>
+		<name>banlist 1</name>
+		<file>/home/urt/banlist.txt</file>
+		<force_ip_range>no</force_ip_range>
+		<message>^4$name^7 is ^1BANNED^7 (BANLIST 1)</message>
+	</ip_banlist>
+	
+	<ip_banlist>
+		<name>banlist 2</name>
+		<file>/home/urt/banlist2.txt</file>
+		<force_ip_range>yes</force_ip_range>
+		<message>^4$name^7 is ^1BANNED^7 (BANLIST 2)</message>
+		<url><![CDATA[http://somewhere.com/banlist.txt]]></url>
+	</ip_banlist>
+	
+	<ip_banlist>
+		<name>banlist 3</name>
+		<file>/home/urt/banlist3.txt</file>
+		<force_ip_range>no</force_ip_range>
+		<message>^4$ip^7 is ^1BANNED^7 (BANLIST 3)</message>
+		<url><![CDATA[ftp://user:pass@somewhere.tld/banlist.txt]]></url>
+	</ip_banlist>
+	
+	<guid_banlist>
+		<name>guid banlist</name>
+		<file>/home/urt/guidbanlist.txt</file>
+		<message>^4$guid^7 is ^1BANNED^7 (GUID 1)</message>
+	</guid_banlist>
+	
+	<guid_banlist>
+		<name>guid banlist 2</name>
+		<file>/home/urt/guidbanlist2.txt</file>
+		<message>^4$id^7 is ^1BANNED^7 (GUID 2)</message>
+	</guid_banlist>
+	
+	
+	<!--///////////////////// W H I T E    L I S T S    Examples  /////////////////////////-->
+	
+	<ip_banlist>
+		<name>friends</name>
+		<file>/home/urt/ipwhitelist1.txt</file>
+		<force_ip_range>yes</force_ip_range>
+		<message>^4$@id^7 found in friends list</message>
+	</ip_banlist>
+    
+	<guid_whitelist>
+		<name>guid whitelist 1</name>
+		<file>/home/urt/guidwhitelist1.txt</file>
+		<message>^4$name^7 found in (^4WHITELIST 1^7)</message>
+		<url><![CDATA[http://somewhere.com/whitelist.txt]]></url>
+	</guid_whitelist>
+	
+</configuration>
