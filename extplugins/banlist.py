@@ -6,7 +6,7 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -59,8 +59,11 @@
 # - the force_ip_range option is now per banlist
 # - message can contains the following keywords : $id, $ip, $guid, $name
 # - a player found in a banlist but 'immunized' by its level is given a notice, (so it can be seen in Echelon)
-
-__version__ = '2.0.0'
+#
+# xx/xx/xxxx - 2.1.0 - Courgette
+# - in guid banlists, search is now case-insensitive
+#
+__version__ = '2.1.0'
 __author__  = 'Courgette'
 
 import urllib2, random, thread, time, string
@@ -504,7 +507,7 @@ class GuidBanlist(Banlist):
     f=open(self.file)
     banlist=f.read()
     
-    if re.compile("([\n]|^)%s" % client.guid).search(banlist) is not None:
+    if re.compile("([\n]|^)%s" % client.guid, re.IGNORECASE).search(banlist) is not None:
       f.close()
       return client.guid
    
