@@ -60,7 +60,7 @@
 # - message can contains the following keywords : $id, $ip, $guid, $name
 # - a player found in a banlist but 'immunized' by its level is given a notice, (so it can be seen in Echelon)
 #
-# xx/xx/xxxx - 2.1.0 - Courgette
+# 27/11/2009 - 2.1.0 - Courgette
 # - in guid banlists, search is now case-insensitive
 #
 __version__ = '2.1.0'
