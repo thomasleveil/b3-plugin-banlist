@@ -63,7 +63,12 @@
 # 27/11/2009 - 2.1.0 - Courgette
 # - in guid banlists, search is now case-insensitive
 #
-__version__ = '2.1.0'
+# 29/11/2009 - 2.1.1 - Courgette
+# - better handling of situations that can raise exceptions
+# - add tests
+#
+
+__version__ = '2.1.1'
 __author__  = 'Courgette'
 
 import urllib2, random, thread, time, string
@@ -301,11 +306,15 @@ class BanlistPlugin(b3.plugin.Plugin):
             
     
   def _verboseUpdateBanListFromUrl(self, client, banlist):
-    result = banlist.updateFromUrl()
-    if result is True:
-        client.message('^7[^4%s^7] ^2updated' % banlist.name)
-    else:
-        client.message('^7[^4%s^7] update ^1failed^7: %s' % (banlist.name, result))
+    try:
+        result = banlist.updateFromUrl()
+        if result is True:
+            client.message('^7[^4%s^7] ^2updated' % banlist.name)
+        else:
+            client.message('^7[^4%s^7] update ^1failed^7: %s' % (banlist.name, result))
+    except BanlistException, e:
+        self.warning("%s" % e.message())
+        client.message('^7[^4%s^7] update ^1failed^7: %s' % (banlist.name, e.message()))
     
   def cmd_banlistcheck(self, data=None, client=None, cmd=None):
     """\
@@ -335,7 +344,7 @@ class Banlist(object):
 
     node = config.find('file')
     if node is None or node.text == '':
-      raise Exception("file not found in config")
+      raise BanlistException("file not found in config")
     else:
       self.file = node.text
 
@@ -350,12 +359,12 @@ class Banlist(object):
       
     if not os.path.isfile(self.file):
       if self.url is None:
-        raise Exception("file '%s' not found or not a file."%self.file)
+        raise BanlistException("file '%s' not found or not a file."%self.file)
       else:
         # create file from url
         result = self.updateFromUrl()
         if result is not True:
-          raise Exception("failed to create '%s' from %s. (%s)" % (self.file, self.url, result))
+          raise BanlistException("failed to create '%s' from %s. (%s)" % (self.file, self.url, result))
         
     elif self.url is not None:
       # check if file ues older than an hour
@@ -366,8 +375,9 @@ class Banlist(object):
         if self.plugin._auto_update: 
             result = self.updateFromUrl()
             if result is not True:
-                raise Exception("failed to create '%s' from %s. (%s)" % (self.file, self.url, result))
-        else: self.plugin.warning("%s [%s] file is older than an hour, consider updating" % (self.__class__.__name__, self.name))
+                raise BanlistException("failed to create '%s' from %s. (%s)" % (self.file, self.url, result))
+        else: 
+            self.plugin.warning("%s [%s] file is older than an hour, consider updating" % (self.__class__.__name__, self.name))
 
         
     if self.url is not None and self.plugin._auto_update:
@@ -391,10 +401,13 @@ class Banlist(object):
       return True
 
   def _updateFromUrlAndCheckAll(self):
-    result = self.updateFromUrl()
-    if result is not True:
-      raise Exception("failed to update '%s' from %s. (%s)" % (self.file, self.url, result))
-    self.plugin.checkConnectedPlayers()
+    try:
+        result = self.updateFromUrl()
+        if result is not True:
+          raise BanlistException("failed to update '%s' from %s. (%s)" % (self.file, self.url, result))
+        self.plugin.checkConnectedPlayers()
+    except BanlistException, e:
+        self.warning("%s" % e.message())
       
   def updateFromUrl(self):
     """
@@ -513,3 +526,65 @@ class GuidBanlist(Banlist):
    
     f.close()
     return False
+
+class BanlistException(Exception):
+    def __init__(self, value):
+        self.parameter = value
+    def __str__(self):
+        return repr(self.parameter)
+
+
+
+if __name__ == '__main__':
+    
+    from b3.fake import fakeConsole
+    from b3.fake import FakeClient
+    
+    conf1 = b3.config.XmlConfigParser()
+    conf1.loadFromString("""
+    <configuration plugin="banlist">
+        <settings name="global_settings">
+            <set name="immunity_level">60</set>
+            <set name="auto_update">yes</set>
+        </settings>
+        <settings name="commands">
+            <set name="banlistinfo-blinfo">20</set>
+            <set name="banlistupdate-blupdate">20</set>
+            <set name="banlistcheck-blcheck">20</set>
+        </settings>
+        <ip_banlist>
+          <name>UAA</name>
+          <file>c:/temp/banlist-uaa.txt</file>
+          <message>^4$name^7 is ^1BANNED^7 by the ^5[UAA]</message>
+          <url>
+            <![CDATA[http://www.urtadmins.com/e107_files/public/banlist.txt]]>
+          </url>
+        </ip_banlist>  
+        <ip_banlist>
+          <name>test ip list</name>
+          <file>c:/temp/banlist-ip.txt</file>
+          <message>^4$name^7 is ^1BANNED^4 (test ip list)</message>
+        </ip_banlist>
+    </configuration>
+    """)
+    
+    p = BanlistPlugin(fakeConsole, conf1)
+    p.onStartup()
+    jack = FakeClient(fakeConsole, name="Jack", exactName="Jack", guid="qsd654sqf", _maxLevel=1, authed=True, ip='11.111.11.111')
+    
+    time.sleep(2)
+    jack.connects(45)
+
+    time.sleep(1)
+#    moderator.says('!blinfo')
+#    moderator.says('!blupdate')
+#    time.sleep(5)
+    moderator.says('!blcheck')
+    
+    time.sleep(5)
+    
+    jack.connects(948)
+    
+    while True: pass
+    
+    
