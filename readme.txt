@@ -80,6 +80,14 @@ Changelog
 27/11/2009 - 2.1.0 - Courgette
 - in guid banlists, search is now case-insensitive
 
+29/11/2009 - 2.1.1 - Courgette
+- better handling of situations that can raise exceptions
+- add tests
+
+16/12/2009 - 2.1.2 - Courgette
+- fix typo in config file example (ip_whitelist)
+
+
 
 Support
 -------

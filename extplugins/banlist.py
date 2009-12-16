@@ -67,8 +67,12 @@
 # - better handling of situations that can raise exceptions
 # - add tests
 #
+# 16/12/2009 - 2.1.2 - Courgette
+# - fix typo in config file example (ip_whitelist)
+#
 
-__version__ = '2.1.1'
+
+__version__ = '2.1.2'
 __author__  = 'Courgette'
 
 import urllib2, random, thread, time, string

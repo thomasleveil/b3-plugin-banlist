@@ -71,12 +71,12 @@
 	
 	<!--///////////////////// W H I T E    L I S T S    Examples  /////////////////////////-->
 	
-	<ip_banlist>
+	<ip_whitelist>
 		<name>friends</name>
 		<file>/home/urt/ipwhitelist1.txt</file>
 		<force_ip_range>yes</force_ip_range>
 		<message>^4$@id^7 found in friends list</message>
-	</ip_banlist>
+	</ip_whitelist>
     
 	<guid_whitelist>
 		<name>guid whitelist 1</name>
