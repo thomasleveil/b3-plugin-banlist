@@ -1,7 +1,7 @@
-banlist plugin for Big Brother Bot (www.bigbrotherbot.com)
+banlist plugin for Big Brother Bot (www.bigbrotherbot.net)
 ==========================================================
 
-By #UbU#Courgette
+By Courgette
 
 
 Description
@@ -87,9 +87,12 @@ Changelog
 16/12/2009 - 2.1.2 - Courgette
 - fix typo in config file example (ip_whitelist)
 
+13/09/2010 - 2.2 - Courgette
+- in config, '~', '@b3' and '@conf' are now expanded for 'file'
+
 
 
 Support
 -------
 
-http://www.bigbrotherbot.com/forums/index.php?topic=389.0
+http://www.bigbrotherbot.net/forums/index.php?topic=389.0
