@@ -20,8 +20,8 @@
     </settings>
 	
 	<!--
-	You can define as much banlist files as you want. 
-	banlists can be of 4 types : ip banlist, ip whitelist, guid banlist or guid whitelist
+	You can define as many banlist files as you want. 
+	Banlists can be of 4 types : ip banlist, ip whitelist, guid banlist or guid whitelist
 	Each banlist definition contains the following information :
 	* name : the name of the banlist, will be used as a reason for the kick (useful to find them in Echelon)
 	* file : the path to the banlist file.

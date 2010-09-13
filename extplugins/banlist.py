@@ -1,5 +1,5 @@
 #
-# Plugin for BigBrotherBot(B3) (www.bigbrotherbot.com)
+# Plugin for BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2008 Courgette
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -70,9 +70,12 @@
 # 16/12/2009 - 2.1.2 - Courgette
 # - fix typo in config file example (ip_whitelist)
 #
+# 13/09/2010 - 2.2 - Courgette
+# - in config, '~', '@b3' and '@conf' are now expanded for 'file'
+#
 
 
-__version__ = '2.1.2'
+__version__ = '2.2'
 __author__  = 'Courgette'
 
 import urllib2, random, thread, time, string
@@ -350,7 +353,7 @@ class Banlist(object):
     if node is None or node.text == '':
       raise BanlistException("file not found in config")
     else:
-      self.file = node.text
+      self.file = self._getpath(node.text)
 
     node = config.find('url')
     if node is not None and node.text != '':
@@ -453,15 +456,20 @@ class Banlist(object):
         .replace('$guid','%s'%client.guid)\
         .replace('$id','@%s'%client.id)
 
-    
-
-
   def getModifiedTime(self):
       """
       return the last modified time of the banlist file
       """
       return os.stat("%s" % self.file)[8]
       
+  def _getpath(self, path):
+    """Return an absolute path name and expand the user prefix (~), @b3 and @conf"""
+    if path[0:3] == '@b3':
+        path = "%s/%s" % (b3.getB3Path(), path[3:])
+    elif path[0:6] == '@conf/' or path[0:6] == '@conf\\':
+        path = "%s/%s" % (b3.getConfPath(), path[5:])
+    return os.path.normpath(os.path.expanduser(path))
+
       
     
 class IpBanlist(Banlist):
@@ -540,55 +548,89 @@ class BanlistException(Exception):
 
 
 if __name__ == '__main__':
+        
+    import unittest
+    class TestGuid(unittest.TestCase):
+        
+        def setUp(self):
+            self.text = "someguidblablablabl\nmqslfm lsqjfd \nazer fsfdq\nAAAAAAAdmlkjmazer\n---BBBBBB---"
+        def test_nonfound(self):
+            result = re.compile("%s" % 'xxxxxxxxxxxxx', re.IGNORECASE).search(self.text)
+            self.assertEqual(result, None)
+        def test_foundStartOfLine(self):
+            result = re.compile("%s" % 'AAAAAAA', re.IGNORECASE).search(self.text)
+            self.assertNotEqual(result, None)
+        def test_foundMiddleLine(self):
+            result = re.compile("%s" % 'BBBBBB', re.IGNORECASE).search(self.text)
+            self.assertNotEqual(result, None)
+        def test_foundMiddleLine2(self):
+            result = re.compile("%s" % 'BBBB', re.IGNORECASE).search(self.text)
+            self.assertNotEqual(result, None)
+         
     
-    from b3.fake import fakeConsole
-    from b3.fake import FakeClient
+    def testPlugin():
+        from b3.fake import fakeConsole, moderator
+        from b3.fake import FakeClient
+        
+        conf1 = b3.config.XmlConfigParser()
+        conf1.loadFromString("""
+        <configuration plugin="banlist">
+            <settings name="global_settings">
+                <set name="immunity_level">60</set>
+                <set name="auto_update">yes</set>
+            </settings>
+            <settings name="commands">
+                <set name="banlistinfo-blinfo">20</set>
+                <set name="banlistupdate-blupdate">20</set>
+                <set name="banlistcheck-blcheck">20</set>
+            </settings>
+            <ip_banlist>
+              <name>UAA</name>
+              <file>c:/temp/banlist-uaa.txt</file>
+              <message>^4$name^7 is ^1BANNED^7 by the ^5[UAA]</message>
+              <url>
+                <![CDATA[http://www.urtadmins.com/e107_files/public/banlist.txt]]>
+              </url>
+            </ip_banlist>  
+            <ip_banlist>
+              <name>test @conf</name>
+              <file>@conf/test.txt</file>
+              <url>
+                <![CDATA[http://www.urtadmins.com/e107_files/public/banlist.txt]]>
+              </url>
+            </ip_banlist>  
+            <ip_banlist>
+              <name>test ~</name>
+              <file>~/test2.txt</file>
+              <url>
+                <![CDATA[http://www.urtadmins.com/e107_files/public/banlist.txt]]>
+              </url>
+            </ip_banlist>  
+            <ip_banlist>
+              <name>test ip list</name>
+              <file>c:/temp/banlist-ip.txt</file>
+              <message>^4$name^7 is ^1BANNED^4 (test ip list)</message>
+            </ip_banlist>
+        </configuration>
+        """)  
+        p = BanlistPlugin(fakeConsole, conf1)
+        p.onStartup()
+        jack = FakeClient(fakeConsole, name="Jack", exactName="Jack", guid="qsd654sqf", _maxLevel=1, authed=True, ip='11.111.11.111')
+        
+        time.sleep(2)
+        jack.connects(45)
     
-    conf1 = b3.config.XmlConfigParser()
-    conf1.loadFromString("""
-    <configuration plugin="banlist">
-        <settings name="global_settings">
-            <set name="immunity_level">60</set>
-            <set name="auto_update">yes</set>
-        </settings>
-        <settings name="commands">
-            <set name="banlistinfo-blinfo">20</set>
-            <set name="banlistupdate-blupdate">20</set>
-            <set name="banlistcheck-blcheck">20</set>
-        </settings>
-        <ip_banlist>
-          <name>UAA</name>
-          <file>c:/temp/banlist-uaa.txt</file>
-          <message>^4$name^7 is ^1BANNED^7 by the ^5[UAA]</message>
-          <url>
-            <![CDATA[http://www.urtadmins.com/e107_files/public/banlist.txt]]>
-          </url>
-        </ip_banlist>  
-        <ip_banlist>
-          <name>test ip list</name>
-          <file>c:/temp/banlist-ip.txt</file>
-          <message>^4$name^7 is ^1BANNED^4 (test ip list)</message>
-        </ip_banlist>
-    </configuration>
-    """)
+        time.sleep(1)
+    #    moderator.says('!blinfo')
+    #    moderator.says('!blupdate')
+    #    time.sleep(5)
+        moderator.says('!blcheck')
+        
+        time.sleep(5)
+        
+        jack.connects(948)
+        
+        while True: pass
     
-    p = BanlistPlugin(fakeConsole, conf1)
-    p.onStartup()
-    jack = FakeClient(fakeConsole, name="Jack", exactName="Jack", guid="qsd654sqf", _maxLevel=1, authed=True, ip='11.111.11.111')
-    
-    time.sleep(2)
-    jack.connects(45)
-
-    time.sleep(1)
-#    moderator.says('!blinfo')
-#    moderator.says('!blupdate')
-#    time.sleep(5)
-    moderator.says('!blcheck')
-    
-    time.sleep(5)
-    
-    jack.connects(948)
-    
-    while True: pass
-    
-    
+    testPlugin()
+    unittest.main()
