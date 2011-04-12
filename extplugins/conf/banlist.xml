@@ -27,6 +27,7 @@
 	* file : the path to the banlist file.
 		- ip banlist : a file containing ip to ban, compatible with quake3 banlist format. If an ip ends with ".0", the full range will be banned. Lines stating with "//" will be ignored.
 		- guid banlist : a file containing guid to ban. Lines stating with "//" will be ignored.
+		- rules_of_combat : a special banlist that support the banlist format for http://www.rulesofcombat.com
 	* message : an optional message that will be displayed in game. Keywords that can be used : $id, $ip, $guid, $name
 		- NOTE:  the ban message is only visible to other players. The banned player WILL NOT SEE that message as it is kicked before having a chance to load the map.
 	* url : an optional url from where the banlist file will be updated hourly
@@ -35,14 +36,14 @@
 	
 	<ip_banlist>
 		<name>banlist 1</name>
-		<file>/home/urt/banlist.txt</file>
+		<file>@conf/banlist.txt</file>
 		<force_ip_range>no</force_ip_range>
 		<message>^4$name^7 is ^1BANNED^7 (BANLIST 1)</message>
 	</ip_banlist>
 	
 	<ip_banlist>
 		<name>banlist 2</name>
-		<file>/home/urt/banlist2.txt</file>
+		<file>@conf/banlist2.txt</file>
 		<force_ip_range>yes</force_ip_range>
 		<message>^4$name^7 is ^1BANNED^7 (BANLIST 2)</message>
 		<url><![CDATA[http://somewhere.com/banlist.txt]]></url>
@@ -50,7 +51,7 @@
 	
 	<ip_banlist>
 		<name>banlist 3</name>
-		<file>/home/urt/banlist3.txt</file>
+		<file>@conf/banlist3.txt</file>
 		<force_ip_range>no</force_ip_range>
 		<message>^4$ip^7 is ^1BANNED^7 (BANLIST 3)</message>
 		<url><![CDATA[ftp://user:pass@somewhere.tld/banlist.txt]]></url>
@@ -58,16 +59,22 @@
 	
 	<guid_banlist>
 		<name>guid banlist</name>
-		<file>/home/urt/guidbanlist.txt</file>
+		<file>@conf/guidbanlist.txt</file>
 		<message>^4$guid^7 is ^1BANNED^7 (GUID 1)</message>
 	</guid_banlist>
 	
 	<guid_banlist>
 		<name>guid banlist 2</name>
-		<file>/home/urt/guidbanlist2.txt</file>
+		<file>@conf/guidbanlist2.txt</file>
 		<message>^4$id^7 is ^1BANNED^7 (GUID 2)</message>
 	</guid_banlist>
 	
+  <rules_of_combat>
+    <name>Rules of Combant</name>
+    <file>@conf/rules_of_combat.txt</file>
+    <message>$id is BANNED (RoC)</message>
+    <url><![CDATA[http://www.rulesofcombat.com/gbl/GlobalBans.php]]></url>
+	</rules_of_combat>
 	
 	<!--///////////////////// W H I T E    L I S T S    Examples  /////////////////////////-->
 	

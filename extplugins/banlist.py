@@ -73,9 +73,12 @@
 # 13/09/2010 - 2.2 - Courgette
 # - in config, '~', '@b3' and '@conf' are now expanded for 'file'
 #
+# 13/04/2011 - 2.3 - Courgette
+# - add support for Rules of Combat banlist format www.rulesofcombat.com
+#
 
 
-__version__ = '2.2'
+__version__ = '2.3'
 __author__  = 'Courgette'
 
 import urllib2, random, thread, time, string
@@ -163,6 +166,14 @@ class BanlistPlugin(b3.plugin.Plugin):
         b = GuidBanlist(self, banlistconfig)
         self._banlists.append(b)
         self.info("GuidBanlist [%s] loaded" % b.name)
+      except Exception, e:
+        self.error(e)
+        
+    for banlistconfig in self.config.get('rules_of_combat'):
+      try:
+        b = RocBanlist(self, banlistconfig)
+        self._banlists.append(b)
+        self.info("RocBanlist [%s] loaded" % b.name)
       except Exception, e:
         self.error(e)
 
@@ -539,6 +550,26 @@ class GuidBanlist(Banlist):
     f.close()
     return False
 
+class RocBanlist(Banlist):
+  def isBanned(self, client):
+  
+    if client.guid is None or client.guid == '':
+      return False
+  
+    if not self._checkFileExists():
+      return False
+      
+    f=open(self.file)
+    banlist=f.read()
+    self.plugin.debug("checking %s" % client.guid)
+    if 'BannedID="%s"' % client.guid in banlist:
+      f.close()
+      return client.guid
+   
+    f.close()
+    return False
+
+
 class BanlistException(Exception):
     def __init__(self, value):
         self.parameter = value
@@ -568,7 +599,7 @@ if __name__ == '__main__':
             self.assertNotEqual(result, None)
          
     
-    def testPlugin():
+    def testPlugin1():
         from b3.fake import fakeConsole, moderator
         from b3.fake import FakeClient
         
@@ -631,6 +662,44 @@ if __name__ == '__main__':
         jack.connects(948)
         
         while True: pass
-    
-    testPlugin()
-    unittest.main()
+   
+   
+       
+    def testPluginRoc():
+        from b3.fake import fakeConsole, moderator
+        from b3.fake import FakeClient
+        
+        conf1 = b3.config.XmlConfigParser()
+        conf1.loadFromString("""
+        <configuration plugin="banlist">
+            <settings name="global_settings">
+                <set name="immunity_level">60</set>
+                <set name="auto_update">yes</set>
+            </settings>
+            <settings name="commands">
+                <set name="banlistinfo-blinfo">20</set>
+                <set name="banlistupdate-blupdate">20</set>
+                <set name="banlistcheck-blcheck">20</set>
+            </settings>
+            <rules_of_combat>
+                <name>Rules of Combant</name>
+                <file>@conf/rules_of_combat.txt</file>
+                <message>$id is BANNED (RoC)</message>
+                <url><![CDATA[http://www.rulesofcombat.com/gbl/GlobalBans.php]]></url>
+            </rules_of_combat>
+        </configuration>
+        """)  
+        p = BanlistPlugin(fakeConsole, conf1)
+        p.onStartup()
+        moderator.connects(0)
+        jack = FakeClient(fakeConsole, name="Jack", exactName="Jack", guid="qsd654sqf", _maxLevel=1, authed=True, ip='11.111.11.111')
+        jack.connects(45)
+        badkiller100 = FakeClient(fakeConsole, name="badkiller100", guid="76561198039414883", _maxLevel=1, authed=True)
+        badkiller100.connects(7)
+        time.sleep(2)
+        moderator.says('!blcheck')
+        while True: pass
+
+    #testPlugin1()
+    testPluginRoc()
+    #unittest.main()
