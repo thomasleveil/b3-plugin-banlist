@@ -76,12 +76,16 @@
 # 13/04/2011 - 2.3 - Courgette
 # - add support for Rules of Combat banlist format www.rulesofcombat.com
 #
+# 15/04/2011 - 2.3.1 - Courgette
+# - explicit encoding for downloading from www.rulesofcombat.com
+#
 
 
-__version__ = '2.3'
+__version__ = '2.3.1'
 __author__  = 'Courgette'
 
 import urllib2, random, thread, time, string
+import codecs
 import b3, re, os
 import b3.events
 import b3.plugin
@@ -558,11 +562,11 @@ class RocBanlist(Banlist):
   
     if not self._checkFileExists():
       return False
-      
-    f=open(self.file)
+    
+    f=codecs.open(self.file, "r", "iso-8859-1" )
     banlist=f.read()
-    self.plugin.debug("checking %s" % client.guid)
-    if 'BannedID="%s"' % client.guid in banlist:
+    self.plugin.debug(u"checking %s" % client.guid)
+    if u'BannedID="%s"' % client.guid in banlist:
       f.close()
       return client.guid
    
