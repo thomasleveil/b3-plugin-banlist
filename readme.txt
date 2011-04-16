@@ -39,7 +39,7 @@ Installation
  * copy banlist.xml into b3/extplugins/conf
  * update your main b3 config file with :
 
-<plugin name="banlist" priority="17" config="@b3/extplugins/conf/banlist.xml"/>
+<plugin name="banlist" config="@b3/extplugins/conf/banlist.xml"/>
 
 
 
@@ -101,6 +101,8 @@ Changelog
 13/04/2011 - 2.3 - Courgette
 - add support for Rules of Combat banlist format www.rulesofcombat.com
 
+15/04/2011 - 2.3.1 - Courgette
+- explicit encoding for downloading from www.rulesofcombat.com
 
 
 Support
