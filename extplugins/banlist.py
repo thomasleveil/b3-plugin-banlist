@@ -79,9 +79,13 @@
 # 15/04/2011 - 2.3.1 - Courgette
 # - explicit encoding for downloading from www.rulesofcombat.com
 #
+# 29/04/2011 - 2.4 - Courgette
+# - makes use of ETag and Last-Modified HTTP headers to avoid downloading unchanged banlist
+#
 
 
-__version__ = '2.3.1'
+
+__version__ = '2.4'
 __author__  = 'Courgette'
 
 import urllib2, random, thread, time, string
@@ -354,6 +358,8 @@ class Banlist(object):
     file = None
     message = None
     url = None
+    remote_lastmodified = None
+    remote_etag = None
 
     def __init__(self, plugin, config):
         self.plugin = plugin
@@ -441,23 +447,44 @@ class Banlist(object):
         self.plugin.info("[%s] updating from %s"% (self.name, self.url))
 
         try:
-            headers =  { 'User-Agent'  : user_agent  }
-            req =  urllib2.Request(self.url, None, headers)
-            webFile =  urllib2.urlopen(req)
-            localFile = open(self.file, 'w')
-            localFile.write(webFile.read())
+            req =  urllib2.Request(self.url, None)
+            req.add_header('User-Agent', user_agent)
+            if self.remote_lastmodified:
+                req.add_header('If-Modified-Since', self.remote_lastmodified)
+            if self.remote_etag:
+                req.add_header('If-None-Match', self.remote_etag)
+            opener = urllib2.build_opener()
+            self.plugin.debug('headers : %r', req.headers)
+            webFile =  opener.open(req)
+            result = webFile.read()
+            self.remote_lastmodified = webFile.headers.get('Last-Modified') 
+            self.remote_etag = webFile.headers.get('ETag') 
             webFile.close()
+            self.plugin.debug('webFile: %r', webFile)
+            self.plugin.debug("received %s bytes", len(result))
+            localFile = open(self.file, 'w')
+            localFile.write(result)
             localFile.close()
             return True
+        except urllib2.HTTPError, err:
+            if err.code == 304:
+                self.plugin.info("remote banlist unchanged since last update")
+                return True
+            else:
+                self.remote_etag = self.remote_lastmodified = None
+                self.plugin.error("%r",err)
+                return "%s"%err
+        except urllib2.URLError, err:
+            self.remote_etag = self.remote_lastmodified = None
+            return "%s"%err
         except IOError, e:
+            self.remote_etag = self.remote_lastmodified = None
             if hasattr(e, 'reason'):
                 return "%s" % e.reason
             elif hasattr(e, 'code'):
                 return "error code: %s" % e.code
             self.plugin.debug("%s"%e)
             return "%s"%e
-        except Exception, e:
-            return "%s" % e.message
 
     def autoUpdateFromUrl(self):
         thread.start_new_thread(self._updateFromUrlAndCheckAll, ())
@@ -579,6 +606,7 @@ class BanlistException(Exception):
         self.parameter = value
     def __str__(self):
         return repr(self.parameter)
+
 
 
 
@@ -704,6 +732,44 @@ if __name__ == '__main__':
         moderator.says('!blcheck')
         while True: pass
 
+
+    def testETag():
+        from b3.fake import fakeConsole, moderator
+
+        conf1 = b3.config.XmlConfigParser()
+        conf1.loadFromString("""
+        <configuration plugin="banlist">
+            <settings name="global_settings">
+                <set name="immunity_level">60</set>
+                <set name="auto_update">yes</set>
+            </settings>
+            <settings name="commands">
+                <set name="banlistinfo-blinfo">20</set>
+                <set name="banlistupdate-blupdate">20</set>
+                <set name="banlistcheck-blcheck">20</set>
+            </settings>
+            <guid_banlist>
+              <name>testETagBanlist</name>
+              <file>@conf/banlist-testETag.txt</file>
+              <message>^4$name^7 is ^1banlisted^7</message>
+              <!--
+              <url><![CDATA[http://localhost/test/GlobalBanList.ini]]></url>
+              -->
+              <url><![CDATA[http://localhost/test/redir301.php]]></url>
+            </guid_banlist>
+        </configuration>
+        """)
+        p = BanlistPlugin(fakeConsole, conf1)
+        p.onStartup()
+        moderator.connects(0)
+        time.sleep(2)
+        print("_"*30)
+        while True:
+            #moderator.says('!blinfo')
+            moderator.says('!blupdate')
+            time.sleep(5)
+
     #testPlugin1()
-    testPluginRoc()
+    #testPluginRoc()
     #unittest.main()
+    testETag()
