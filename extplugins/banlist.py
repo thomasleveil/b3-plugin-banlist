@@ -81,7 +81,7 @@
 #
 # 29/04/2011 - 2.4 - Courgette
 # - makes use of ETag and Last-Modified HTTP headers to avoid downloading unchanged banlist
-#
+# - supports gzip encoding while downloading banlists
 
 
 
@@ -90,6 +90,7 @@ __author__  = 'Courgette'
 
 import urllib2, random, thread, time, string
 import codecs
+import StringIO, gzip
 import b3, re, os
 import b3.events
 import b3.plugin
@@ -449,6 +450,7 @@ class Banlist(object):
         try:
             req =  urllib2.Request(self.url, None)
             req.add_header('User-Agent', user_agent)
+            req.add_header('Accept-encoding', 'gzip')
             if self.remote_lastmodified:
                 req.add_header('If-Modified-Since', self.remote_lastmodified)
             if self.remote_etag:
@@ -457,10 +459,14 @@ class Banlist(object):
             self.plugin.debug('headers : %r', req.headers)
             webFile =  opener.open(req)
             result = webFile.read()
+            webFile.close()
+            if webFile.headers.get('content-encoding', '') == 'gzip':
+                result = StringIO.StringIO(result)
+                gzipper = gzip.GzipFile(fileobj=result)
+                result = gzipper.read()
             self.remote_lastmodified = webFile.headers.get('Last-Modified') 
             self.remote_etag = webFile.headers.get('ETag') 
-            webFile.close()
-            self.plugin.debug('webFile: %r', webFile)
+            self.plugin.debug('received headers : %s', webFile.info())
             self.plugin.debug("received %s bytes", len(result))
             localFile = open(self.file, 'w')
             localFile.write(result)
@@ -752,10 +758,7 @@ if __name__ == '__main__':
               <name>testETagBanlist</name>
               <file>@conf/banlist-testETag.txt</file>
               <message>^4$name^7 is ^1banlisted^7</message>
-              <!--
               <url><![CDATA[http://localhost/test/GlobalBanList.ini]]></url>
-              -->
-              <url><![CDATA[http://localhost/test/redir301.php]]></url>
             </guid_banlist>
         </configuration>
         """)
