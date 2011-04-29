@@ -104,6 +104,11 @@ Changelog
 15/04/2011 - 2.3.1 - Courgette
 - explicit encoding for downloading from www.rulesofcombat.com
 
+29/04/2011 - 2.4 - Courgette
+- makes use of ETag and Last-Modified HTTP headers to avoid downloading unchanged banlist
+- supports gzip encoding while downloading banlists
+
+
 
 Support
 -------
