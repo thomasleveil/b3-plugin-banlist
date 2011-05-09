@@ -12,6 +12,6 @@
 		<name>Rules of Combant</name>
 		<file>@conf/rules_of_combat.txt</file>
 		<message>$id is BANNED (RoC)</message>
-		<url><![CDATA[http://www.rulesofcombat.com/gbl/GlobalBans.php]]></url>
+		<url><![CDATA[http://gbl.rulesofcombat.com/gbl.php]]></url>
 	</rules_of_combat>
 </configuration>
