@@ -108,9 +108,11 @@ Changelog
 - makes use of ETag and Last-Modified HTTP headers to avoid downloading unchanged banlist
 - supports gzip encoding while downloading banlists
 
+24/08/2011 - 2.4.1 - Courgette
+- fix config file validation for elements 'name' and 'file'
 
 
 Support
 -------
 
-http://www.bigbrotherbot.net/forums/index.php?topic=389.0
+http://forum.bigbrotherbot.net/index.php?topic=389.0

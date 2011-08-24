@@ -82,10 +82,12 @@
 # 29/04/2011 - 2.4 - Courgette
 # - makes use of ETag and Last-Modified HTTP headers to avoid downloading unchanged banlist
 # - supports gzip encoding while downloading banlists
+#
+# 24/08/2011 - 2.4.1 - Courgette
+# - fix config file validation for elements 'name' and 'file'
+#
 
-
-
-__version__ = '2.4'
+__version__ = '2.4.1'
 __author__  = 'Courgette'
 
 import urllib2, random, thread, time, string
@@ -366,13 +368,13 @@ class Banlist(object):
         self.plugin = plugin
 
         node = config.find('name')
-        if node is None or node.text == '':
+        if node is None or node.text is None or node.text == '':
             self.plugin.warning("name not found in config")
         else:
             self.name = node.text
 
         node = config.find('file')
-        if node is None or node.text == '':
+        if node is None or node.text is None or node.text == '':
             raise BanlistException("file not found in config")
         else:
             self.file = self._getpath(node.text)
@@ -703,6 +705,63 @@ if __name__ == '__main__':
 
 
 
+    def testPlugin2():
+        from b3.fake import fakeConsole
+
+        conf1 = b3.config.XmlConfigParser()
+        conf1.loadFromString("""
+        <configuration plugin="banlist">
+
+            <settings name="global_settings">
+                <!-- level from which players won't be checked, thus never be kicked. (default: 100) -->
+                <set name="immunity_level">100</set>
+                
+                <!-- do you want to update banlists that provide an URL automatically every hour ? (default: yes) -->
+                <set name="auto_update">yes</set>
+            </settings>
+        
+            <settings name="commands">
+                <!-- Command to list all loaded lists -->
+                <set name="banlistinfo-blinfo">100</set>
+                
+                <!-- Command to update all lists from their URL (if any) -->
+                <set name="banlistupdate-blupdate">100</set>
+                
+                <!-- Command to force checking of connected players -->
+                <set name="banlistcheck-blcheck">100</set>
+            </settings>
+        
+            <!--
+            You can define as much banlist files as you want. 
+            banlists can be of 4 types : ip banlist, ip whitelist, guid banlist or guid whitelist
+            Each banlist definition contains the following information :
+            * name : the name of the banlist, will be used as a reason for the kick (useful to find them in Echelon)
+            * file : the path to the banlist file.
+                - ip banlist : a file containing ip to ban, compatible with quake3 banlist format. If an ip ends with ".0", the full range will be banned. Lines stating with "//" will be ignored.
+                - guid banlist : a file containing guid to ban. Lines stating with "//" will be ignored.
+            * message : an optional message that will be displayed in game. Keywords that can be used : $id, $ip, $guid, $name
+                - NOTE:  the ban message is only visible to other players. The banned player WILL NOT SEE that message as it is kicked before having a chance to load the map.
+            * url : an optional url from where the banlist file will be updated hourly
+            * force_ip_range : yes/no. If yes all IPs will be read as if they were ending with '.0'
+            -->
+        
+          <ip_banlist>
+            <name>KJ BANLIST</name>
+            <file></file>
+            <force_ip_range>no</force_ip_range>
+            <message>^4$name^7 is ^1BANNED^7 by ^6[KJ Banlist]</message>
+            <url>http://killjoyclan.com/echelon/banlist.php</url>
+          </ip_banlist>  
+        
+        </configuration>
+        """)
+        p = BanlistPlugin(fakeConsole, conf1)
+        p.onLoadConfig()
+        p.onStartup()
+        time.sleep(2)
+
+
+
     def testPluginRoc():
         from b3.fake import fakeConsole, moderator
         from b3.fake import FakeClient
@@ -773,6 +832,7 @@ if __name__ == '__main__':
             time.sleep(5)
 
     #testPlugin1()
+    testPlugin2()
     #testPluginRoc()
     #unittest.main()
-    testETag()
+    #testETag()
