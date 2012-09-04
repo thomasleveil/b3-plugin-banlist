@@ -52,7 +52,7 @@ class Test_GuidBanlist(BanlistTestCase):
         self.assertTrue(self.isBanned(guid))
         self.assertTrue(self.banlist.plugin.info.called)
         if expected_debug:
-            self.banlist.plugin.info.assert_called_with("guid '%s' matches banlist entry %r (Banlist_name 2000-01-01 01:00:00)" % (guid, expected_debug))
+            self.banlist.plugin.info.assert_called_with("guid '%s' matches banlist entry %r (Banlist_name 2000-01-01 00:00:00)" % (guid, expected_debug))
         else:
             args = self.banlist.plugin.info.call_args[0][0]
             self.assertTrue(args.startswith("guid '%s' matches banlist entry " % guid), args)
@@ -60,7 +60,7 @@ class Test_GuidBanlist(BanlistTestCase):
     def assertNotBanned(self, guid):
         self.banlist.plugin.info.reset_mock()
         self.assertFalse(self.isBanned(guid))
-        self.banlist.plugin.verbose.assert_called_with("guid '%s' not found in banlist (Banlist_name 2000-01-01 01:00:00)" % guid)
+        self.banlist.plugin.verbose.assert_called_with("guid '%s' not found in banlist (Banlist_name 2000-01-01 00:00:00)" % guid)
 
 
     ##############################################################################################

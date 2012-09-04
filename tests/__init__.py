@@ -40,10 +40,13 @@ class BanlistTestCase(TestCase):
 
         self.patcher_getModifiedTime = patch("banlist.Banlist.getModifiedTime", return_value=946684800)
         self.patcher_getModifiedTime.start()
+        self.patcher_getHumanModifiedTime = patch("banlist.Banlist.getHumanModifiedTime", return_value="2000-01-01 00:00:00")
+        self.patcher_getHumanModifiedTime.start()
 
 
     def tearDown(self):
         self.patcher_isfile.stop()
         self.patcher_open.stop()
         self.patcher_getModifiedTime.stop()
+        self.patcher_getHumanModifiedTime.stop()
 

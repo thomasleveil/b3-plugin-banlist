@@ -55,7 +55,7 @@ class Test_IpBanlist(BanlistTestCase):
     def test_empty_banlist(self):
         self.file_content = ''
         self.assertFalse(self.isBanned("11.22.33.44"))
-        self.ip_banlist.plugin.verbose.assert_called_with("ip '11.22.33.44' not found in banlist (Banlist_name 2000-01-01 01:00:00)")
+        self.ip_banlist.plugin.verbose.assert_called_with("ip '11.22.33.44' not found in banlist (Banlist_name 2000-01-01 00:00:00)")
 
 
     def test_match_strict(self):
@@ -67,12 +67,12 @@ class Test_IpBanlist(BanlistTestCase):
         def assertBanned(ip, expected_matched_line):
             self.ip_banlist.plugin.info.reset_mock()
             self.assertTrue(self.isBanned(ip))
-            self.ip_banlist.plugin.info.assert_called_with("ip '%s' matches banlist entry '%s' (Banlist_name 2000-01-01 01:00:00)" % (ip, expected_matched_line))
+            self.ip_banlist.plugin.info.assert_called_with("ip '%s' matches banlist entry '%s' (Banlist_name 2000-01-01 00:00:00)" % (ip, expected_matched_line))
 
         def assertNotBanned(ip):
             self.ip_banlist.plugin.verbose.reset_mock()
             self.assertFalse(self.isBanned(ip))
-            self.ip_banlist.plugin.verbose.assert_called_with("ip '%s' not found in banlist (Banlist_name 2000-01-01 01:00:00)" % ip)
+            self.ip_banlist.plugin.verbose.assert_called_with("ip '%s' not found in banlist (Banlist_name 2000-01-01 00:00:00)" % ip)
 
         assertBanned("11.22.33.44", "11.22.33.44:-1")
         assertNotBanned("11.22.33.4")
@@ -92,7 +92,7 @@ class Test_IpBanlist(BanlistTestCase):
         def assertNotBanned(ip):
             self.ip_banlist.plugin.verbose.reset_mock()
             self.assertFalse(self.isBanned(ip))
-            self.ip_banlist.plugin.verbose.assert_called_with("ip '%s' not found in banlist (Banlist_name 2000-01-01 01:00:00)" % ip)
+            self.ip_banlist.plugin.verbose.assert_called_with("ip '%s' not found in banlist (Banlist_name 2000-01-01 00:00:00)" % ip)
 
         assertNotBanned("11.22.33.44")
         assertNotBanned("22.33.44.11")
@@ -108,12 +108,12 @@ class Test_IpBanlist(BanlistTestCase):
         def assertBanned(ip, expected_matched_line):
             self.ip_banlist.plugin.info.reset_mock()
             self.assertTrue(self.isBanned(ip))
-            self.ip_banlist.plugin.info.assert_called_with("ip '%s' matches (by range) banlist entry '%s' (Banlist_name 2000-01-01 01:00:00)" % (ip, expected_matched_line))
+            self.ip_banlist.plugin.info.assert_called_with("ip '%s' matches (by range) banlist entry '%s' (Banlist_name 2000-01-01 00:00:00)" % (ip, expected_matched_line))
 
         def assertNotBanned(ip):
             self.ip_banlist.plugin.info.reset_mock()
             self.assertFalse(self.isBanned(ip))
-            self.ip_banlist.plugin.info.assert_called_with("ip '%s' not found in banlist (Banlist_name 2000-01-01 01:00:00)" % ip)
+            self.ip_banlist.plugin.info.assert_called_with("ip '%s' not found in banlist (Banlist_name 2000-01-01 00:00:00)" % ip)
 
 
         assertBanned("11.22.33.44", "11.22.33.0:-1")
@@ -134,12 +134,12 @@ class Test_IpBanlist(BanlistTestCase):
         def assertBanned(ip, expected_matched_line):
             self.ip_banlist.plugin.info.reset_mock()
             self.assertTrue(self.isBanned(ip))
-            self.ip_banlist.plugin.info.assert_called_with("ip '%s' matches (by forced range) banlist entry '%s' (Banlist_name 2000-01-01 01:00:00)" % (ip, expected_matched_line))
+            self.ip_banlist.plugin.info.assert_called_with("ip '%s' matches (by forced range) banlist entry '%s' (Banlist_name 2000-01-01 00:00:00)" % (ip, expected_matched_line))
 
         def assertNotBanned(ip):
             self.ip_banlist.plugin.verbose.reset_mock()
             self.assertFalse(self.isBanned(ip))
-            self.ip_banlist.plugin.verbose.assert_called_with("ip '%s' not found in banlist (Banlist_name 2000-01-01 01:00:00)" % ip)
+            self.ip_banlist.plugin.verbose.assert_called_with("ip '%s' not found in banlist (Banlist_name 2000-01-01 00:00:00)" % ip)
 
         assertBanned("11.22.33.77", "11.22.33.44:-1")
         assertBanned("11.22.33.4", "11.22.33.44:-1")
