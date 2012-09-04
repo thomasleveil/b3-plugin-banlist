@@ -36,10 +36,10 @@ Installation
 ------------
 
  * copy banlist.py into b3/extplugins
- * copy banlist.xml into b3/extplugins/conf
+ * copy plugin_banlist.xml in the same directory as your b3.xml
  * update your main b3 config file with :
 
-<plugin name="banlist" config="@b3/extplugins/conf/banlist.xml"/>
+<plugin name="banlist" config="@conf/plugin_banlist.xml"/>
 
 
 
@@ -110,6 +110,10 @@ Changelog
 
 24/08/2011 - 2.4.1 - Courgette
 - fix config file validation for elements 'name' and 'file'
+
+04/09/2012 - 2.5 - Courgette
+- reduce I/O access by loading the banlist files into memory and caching check results
+
 
 
 Support

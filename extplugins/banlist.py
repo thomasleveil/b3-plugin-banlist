@@ -18,17 +18,14 @@
 #
 # Changelog:
 #
-# 00:26 09/07/2008 - Courgette
+# 09/07/2008 - Courgette
 # - allows to define multiple banlists
 # - understands guid banlists
 #
-# 01:41 09/07/2008 - courgette
-# - minor fix
-#
-# 01:46 21/07/2008 - 1.0.0 - Courgette
+# 21/07/2008 - 1.0.0 - Courgette
 # - banlist can be updated hourly from an url
 #
-# 00:50 26/07/2008 - 1.1.0 - Courgette
+# 26/07/2008 - 1.1.0 - Courgette
 # - makes use of thread while updating banlist from url
 # - makes use of thread while checking a player
 # - fails nicely on http error (thanks to flinkaflenkaflrsk's bug report)
@@ -38,14 +35,14 @@
 # - upon player check, if banlist file is missing and url is provided, update file from url and check player
 # - fix minor bug when using command !reconfig
 #
-# 19:43 26/07/2008 - 1.1.1 - Courgette
+# 26/07/2008 - 1.1.1 - Courgette
 # - better handling of network errors while updating banlist (Thx flinkaflenkaflrsk again for tests)
 # - add !banlistinfo command
 #
-# 23:41 08/08/2008 - 1.1.2 - Courgette
+# 08/08/2008 - 1.1.2 - Courgette
 # - manage cases where client ip/guid is unknown (thx to Anubis report)
 #
-# 23:35 15/10/2008 - 1.1.3 - Courgette
+# 15/10/2008 - 1.1.3 - Courgette
 # -  add the ip/guid that triggered the kick in the kick message so it appears in the log/echelon
 #
 # 27/03/2009 - 2.0.0 - Courgette
@@ -86,8 +83,10 @@
 # 24/08/2011 - 2.4.1 - Courgette
 # - fix config file validation for elements 'name' and 'file'
 #
-
-__version__ = '2.4.1'
+# 01/09/2012 - 2.5 - Courgette
+# - reduce I/O access by loading the banlist files into memory and caching check results
+#
+__version__ = '2.5'
 __author__  = 'Courgette'
 
 import urllib2, random, thread, time, string
@@ -240,6 +239,7 @@ class BanlistPlugin(b3.plugin.Plugin):
         for c in clients:
             self.checkClient(c)
 
+
     def checkClient(self, client):
         """\
         Examine players ip-bans and allow/deny to connect.
@@ -269,6 +269,7 @@ class BanlistPlugin(b3.plugin.Plugin):
                     client.notice("%s, ip:%s, guid:%s found in banlist [%s] but is immune due to its level %s" % (client.name, client.ip, client.guid, banlist.name, client.maxLevel), None)
                     self.info("@%s %s, ip:%s, guid:%s found in banlist [%s] but is immune due to its level %s" % (client.id, client.name, client.ip, client.guid, banlist.name, client.maxLevel))
                     return
+
 
     def cmd_banlistinfo(self, data=None, client=None, cmd=None):
         """\
@@ -345,6 +346,7 @@ class BanlistPlugin(b3.plugin.Plugin):
             self.warning("%s" % e.message())
             client.message('^7[^4%s^7] update ^1failed^7: %s' % (banlist.name, e.message()))
 
+
     def cmd_banlistcheck(self, data=None, client=None, cmd=None):
         """\
         check all players against banlists
@@ -352,6 +354,7 @@ class BanlistPlugin(b3.plugin.Plugin):
         if client is not None: client.message("checking players ...")
         self.checkConnectedPlayers()
         if client is not None: client.message("^4done")
+
 
 
 class Banlist(object):
@@ -366,6 +369,10 @@ class Banlist(object):
 
     def __init__(self, plugin, config):
         self.plugin = plugin
+
+        self.file_content = "" # the banlist file content
+        self.cache = {} # used to cache isBanned results. Must be cleared after banlist file change/update
+        self.cache_time = 0 # holds the modifed time of the banlist file used to fill that cache
 
         node = config.find('name')
         if node is None or node.text is None or node.text == '':
@@ -390,7 +397,7 @@ class Banlist(object):
 
         if not os.path.isfile(self.file):
             if self.url is None:
-                raise BanlistException("file '%s' not found or not a file."%self.file)
+                raise BanlistException("file '%s' not found or not a file." % self.file)
             else:
                 # create file from url
                 result = self.updateFromUrl()
@@ -419,6 +426,12 @@ class Banlist(object):
 
         self.plugin.info("loading %s [%s], file:[%s], url:[%s], message:[%s]" % (self.__class__.__name__, self.name, self.file, self.url, self.message))
 
+
+    def clear_cache(self):
+        self.cache = {}
+        self.cache_time = self.getModifiedTime()
+
+
     def _checkFileExists(self):
         if not os.path.isfile(self.file):
             if self.url is None:
@@ -431,6 +444,7 @@ class Banlist(object):
         else:
             return True
 
+
     def _updateFromUrlAndCheckAll(self):
         try:
             result = self.updateFromUrl()
@@ -439,6 +453,7 @@ class Banlist(object):
             self.plugin.checkConnectedPlayers()
         except BanlistException, e:
             self.warning("%s" % e.message())
+
 
     def updateFromUrl(self):
         """
@@ -494,8 +509,10 @@ class Banlist(object):
             self.plugin.debug("%s"%e)
             return "%s"%e
 
+
     def autoUpdateFromUrl(self):
         thread.start_new_thread(self._updateFromUrlAndCheckAll, ())
+
 
     def getMessage(self, client):
         """
@@ -506,11 +523,17 @@ class Banlist(object):
             .replace('$guid','%s'%client.guid)\
             .replace('$id','@%s'%client.id)
 
+
     def getModifiedTime(self):
         """
         return the last modified time of the banlist file
         """
         return os.stat("%s" % self.file)[8]
+
+
+    def getHumanModifiedTime(self):
+        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.getModifiedTime()))
+
 
     def _getpath(self, path):
         """Return an absolute path name and expand the user prefix (~), @b3 and @conf"""
@@ -519,6 +542,17 @@ class Banlist(object):
         elif path[0:6] == '@conf/' or path[0:6] == '@conf\\':
             path = "%s/%s" % (b3.getConfPath(), path[5:])
         return os.path.normpath(os.path.expanduser(path))
+
+
+    def refreshBanlistContent(self):
+        if not self._checkFileExists():
+            return ""
+
+        if self.cache_time != self.getModifiedTime():
+            with open(self.file) as f:
+                self.plugin.verbose("updating %s content cache from %s" % (self, self.file))
+                self.file_content = f.read()
+            self.clear_cache()
 
 
 
@@ -536,60 +570,77 @@ class IpBanlist(Banlist):
             self._forceRange = False
         self.plugin.debug("%s [%s] force IP range : %s" % (self.__class__.__name__, self.name, self._forceRange))
 
-    def isBanned(self, client):
 
+    def isBanned(self, client):
         if client.ip is None or client.ip == '':
             return False
 
-        if not self._checkFileExists():
-            return False
+        self.refreshBanlistContent()
 
-        f=open(self.file)
-        banlist=f.read()
+        if client.ip not in self.cache:
+            self.cache[client.ip] = self.isIpInBanlist(client.ip)
 
+        rv, msg = self.cache[client.ip]
+        if rv:
+            self.plugin.info(msg)
+        else:
+            self.plugin.verbose(msg)
+        return rv
+
+
+    def isIpInBanlist(self, ip):
         # search the exact ip
-        rStrict=re.compile("([\n]|^)%s" % client.ip.replace('.','\.'))
-        if rStrict.search(banlist) is not None:
-            f.close()
-            return client.ip
+        rStrict = re.compile(r'''^(?P<entry>%s(?:\D|$).*)$''' % re.escape(ip), re.MULTILINE)
+        m = rStrict.search(self.file_content)
+        if m:
+            return ip, "ip '%s' matches banlist entry %r (%s %s)" % (ip, m.group('entry').strip(), self.name, self.getHumanModifiedTime())
 
         # search the ip with .0 at the end
-        rRange=re.compile("([\n]|^)%s" % '\.'.join(client.ip.split('.')[0:3])+'\.0')
-        if rRange.search(banlist) is not None:
-            f.close()
-            return client.ip
+        rRange = re.compile(r'''^(?P<entry>%s\.0(\D|$).*)$''' % re.escape('.'.join(ip.split('.')[0:3])), re.MULTILINE)
+        m = rRange.search(self.file_content)
+        if m:
+            return ip, "ip '%s' matches (by range) banlist entry %r (%s %s)" % (ip, m.group('entry').strip(), self.name, self.getHumanModifiedTime())
 
         # if force range is set, enfore search by range event if banlist ip are not ending with ".0"
-        rForceRange=re.compile("([\n]|^)%s" % '\.'.join(client.ip.split('.')[0:3])+'\.')
-        if self._forceRange and rForceRange.search(banlist) is not None:
-            f.close()
-            return client.ip
+        if self._forceRange:
+            rForceRange = re.compile(r'''^(?P<entry>%s\..*)$''' % re.escape('.'.join(ip.split('.')[0:3])), re.MULTILINE)
+            m = rForceRange.search(self.file_content)
+            if m:
+                return ip, "ip '%s' matches (by forced range) banlist entry %r (%s %s)" % (ip, m.group('entry').strip(), self.name, self.getHumanModifiedTime())
 
-        f.close()
-        return False
+        return False, "ip '%s' not found in banlist (%s %s)" % (ip, self.name, self.getHumanModifiedTime())
 
 
 class GuidBanlist(Banlist):
 
     def isBanned(self, client):
-
         if client.guid is None or client.guid == '':
             return False
 
-        if not self._checkFileExists():
-            return False
+        self.refreshBanlistContent()
 
-        f=open(self.file)
-        banlist=f.read()
+        if client.ip not in self.cache:
+            self.cache[client.guid] = self.isGuidInBanlist(client.guid)
 
-        if re.compile("([\n]|^)%s" % client.guid, re.IGNORECASE).search(banlist) is not None:
-            f.close()
-            return client.guid
+        rv, msg = self.cache[client.guid]
+        if rv:
+            self.plugin.info(msg)
+        else:
+            self.plugin.verbose(msg)
+        return rv
 
-        f.close()
-        return False
+
+    def isGuidInBanlist(self, guid):
+        re_guid = re.compile(r'''^(?P<entry>\s*%s\b.*)$''' % re.escape(guid), re.IGNORECASE | re.MULTILINE)
+        m = re_guid.search(self.file_content)
+        if m:
+            return guid, "guid '%s' matches banlist entry %r (%s %s)" % (guid, m.group('entry'), self.name, self.getHumanModifiedTime())
+        return False, "guid '%s' not found in banlist (%s %s)" % (guid, self.name, self.getHumanModifiedTime())
+
+
 
 class RocBanlist(Banlist):
+
     def isBanned(self, client):
 
         if client.guid is None or client.guid == '':
@@ -598,7 +649,7 @@ class RocBanlist(Banlist):
         if not self._checkFileExists():
             return False
 
-        f=codecs.open(self.file, "r", "iso-8859-1" )
+        f = codecs.open(self.file, "r", "iso-8859-1" )
         banlist=f.read()
         self.plugin.debug(u"checking %s" % client.guid)
         if u'BannedID="%s"' % client.guid in banlist:
@@ -617,222 +668,3 @@ class BanlistException(Exception):
 
 
 
-
-if __name__ == '__main__':
-
-    import unittest
-    class TestGuid(unittest.TestCase):
-
-        def setUp(self):
-            self.text = "someguidblablablabl\nmqslfm lsqjfd \nazer fsfdq\nAAAAAAAdmlkjmazer\n---BBBBBB---"
-        def test_nonfound(self):
-            result = re.compile("%s" % 'xxxxxxxxxxxxx', re.IGNORECASE).search(self.text)
-            self.assertEqual(result, None)
-        def test_foundStartOfLine(self):
-            result = re.compile("%s" % 'AAAAAAA', re.IGNORECASE).search(self.text)
-            self.assertNotEqual(result, None)
-        def test_foundMiddleLine(self):
-            result = re.compile("%s" % 'BBBBBB', re.IGNORECASE).search(self.text)
-            self.assertNotEqual(result, None)
-        def test_foundMiddleLine2(self):
-            result = re.compile("%s" % 'BBBB', re.IGNORECASE).search(self.text)
-            self.assertNotEqual(result, None)
-
-
-    def testPlugin1():
-        from b3.fake import fakeConsole, moderator
-        from b3.fake import FakeClient
-
-        conf1 = b3.config.XmlConfigParser()
-        conf1.loadFromString("""
-        <configuration plugin="banlist">
-            <settings name="global_settings">
-                <set name="immunity_level">60</set>
-                <set name="auto_update">yes</set>
-            </settings>
-            <settings name="commands">
-                <set name="banlistinfo-blinfo">20</set>
-                <set name="banlistupdate-blupdate">20</set>
-                <set name="banlistcheck-blcheck">20</set>
-            </settings>
-            <ip_banlist>
-              <name>UAA</name>
-              <file>c:/temp/banlist-uaa.txt</file>
-              <message>^4$name^7 is ^1BANNED^7 by the ^5[UAA]</message>
-              <url>
-                <![CDATA[http://www.urtadmins.com/e107_files/public/banlist.txt]]>
-              </url>
-            </ip_banlist>
-            <ip_banlist>
-              <name>test @conf</name>
-              <file>@conf/test.txt</file>
-              <url>
-                <![CDATA[http://www.urtadmins.com/e107_files/public/banlist.txt]]>
-              </url>
-            </ip_banlist>
-            <ip_banlist>
-              <name>test ~</name>
-              <file>~/test2.txt</file>
-              <url>
-                <![CDATA[http://www.urtadmins.com/e107_files/public/banlist.txt]]>
-              </url>
-            </ip_banlist>
-            <ip_banlist>
-              <name>test ip list</name>
-              <file>c:/temp/banlist-ip.txt</file>
-              <message>^4$name^7 is ^1BANNED^4 (test ip list)</message>
-            </ip_banlist>
-        </configuration>
-        """)
-        p = BanlistPlugin(fakeConsole, conf1)
-        p.onStartup()
-        jack = FakeClient(fakeConsole, name="Jack", exactName="Jack", guid="qsd654sqf", _maxLevel=1, authed=True, ip='11.111.11.111')
-
-        time.sleep(2)
-        jack.connects(45)
-
-        time.sleep(1)
-    #    moderator.says('!blinfo')
-    #    moderator.says('!blupdate')
-    #    time.sleep(5)
-        moderator.says('!blcheck')
-
-        time.sleep(5)
-
-        jack.connects(948)
-
-        while True: pass
-
-
-
-    def testPlugin2():
-        from b3.fake import fakeConsole
-
-        conf1 = b3.config.XmlConfigParser()
-        conf1.loadFromString("""
-        <configuration plugin="banlist">
-
-            <settings name="global_settings">
-                <!-- level from which players won't be checked, thus never be kicked. (default: 100) -->
-                <set name="immunity_level">100</set>
-                
-                <!-- do you want to update banlists that provide an URL automatically every hour ? (default: yes) -->
-                <set name="auto_update">yes</set>
-            </settings>
-        
-            <settings name="commands">
-                <!-- Command to list all loaded lists -->
-                <set name="banlistinfo-blinfo">100</set>
-                
-                <!-- Command to update all lists from their URL (if any) -->
-                <set name="banlistupdate-blupdate">100</set>
-                
-                <!-- Command to force checking of connected players -->
-                <set name="banlistcheck-blcheck">100</set>
-            </settings>
-        
-            <!--
-            You can define as much banlist files as you want. 
-            banlists can be of 4 types : ip banlist, ip whitelist, guid banlist or guid whitelist
-            Each banlist definition contains the following information :
-            * name : the name of the banlist, will be used as a reason for the kick (useful to find them in Echelon)
-            * file : the path to the banlist file.
-                - ip banlist : a file containing ip to ban, compatible with quake3 banlist format. If an ip ends with ".0", the full range will be banned. Lines stating with "//" will be ignored.
-                - guid banlist : a file containing guid to ban. Lines stating with "//" will be ignored.
-            * message : an optional message that will be displayed in game. Keywords that can be used : $id, $ip, $guid, $name
-                - NOTE:  the ban message is only visible to other players. The banned player WILL NOT SEE that message as it is kicked before having a chance to load the map.
-            * url : an optional url from where the banlist file will be updated hourly
-            * force_ip_range : yes/no. If yes all IPs will be read as if they were ending with '.0'
-            -->
-        
-          <ip_banlist>
-            <name>KJ BANLIST</name>
-            <file></file>
-            <force_ip_range>no</force_ip_range>
-            <message>^4$name^7 is ^1BANNED^7 by ^6[KJ Banlist]</message>
-            <url>http://killjoyclan.com/echelon/banlist.php</url>
-          </ip_banlist>  
-        
-        </configuration>
-        """)
-        p = BanlistPlugin(fakeConsole, conf1)
-        p.onLoadConfig()
-        p.onStartup()
-        time.sleep(2)
-
-
-
-    def testPluginRoc():
-        from b3.fake import fakeConsole, moderator
-        from b3.fake import FakeClient
-
-        conf1 = b3.config.XmlConfigParser()
-        conf1.loadFromString("""
-        <configuration plugin="banlist">
-            <settings name="global_settings">
-                <set name="immunity_level">60</set>
-                <set name="auto_update">yes</set>
-            </settings>
-            <settings name="commands">
-                <set name="banlistinfo-blinfo">20</set>
-                <set name="banlistupdate-blupdate">20</set>
-                <set name="banlistcheck-blcheck">20</set>
-            </settings>
-            <rules_of_combat>
-                <name>Rules of Combant</name>
-                <file>@conf/rules_of_combat.txt</file>
-                <message>$id is BANNED (RoC)</message>
-                <url><![CDATA[http://www.rulesofcombat.com/gbl/GlobalBans.php]]></url>
-            </rules_of_combat>
-        </configuration>
-        """)
-        p = BanlistPlugin(fakeConsole, conf1)
-        p.onStartup()
-        moderator.connects(0)
-        jack = FakeClient(fakeConsole, name="Jack", exactName="Jack", guid="qsd654sqf", _maxLevel=1, authed=True, ip='11.111.11.111')
-        jack.connects(45)
-        badkiller100 = FakeClient(fakeConsole, name="badkiller100", guid="76561198039414883", _maxLevel=1, authed=True)
-        badkiller100.connects(7)
-        time.sleep(2)
-        moderator.says('!blcheck')
-        while True: pass
-
-
-    def testETag():
-        from b3.fake import fakeConsole, moderator
-
-        conf1 = b3.config.XmlConfigParser()
-        conf1.loadFromString("""
-        <configuration plugin="banlist">
-            <settings name="global_settings">
-                <set name="immunity_level">60</set>
-                <set name="auto_update">yes</set>
-            </settings>
-            <settings name="commands">
-                <set name="banlistinfo-blinfo">20</set>
-                <set name="banlistupdate-blupdate">20</set>
-                <set name="banlistcheck-blcheck">20</set>
-            </settings>
-            <guid_banlist>
-              <name>testETagBanlist</name>
-              <file>@conf/banlist-testETag.txt</file>
-              <message>^4$name^7 is ^1banlisted^7</message>
-              <url><![CDATA[http://localhost/test/GlobalBanList.ini]]></url>
-            </guid_banlist>
-        </configuration>
-        """)
-        p = BanlistPlugin(fakeConsole, conf1)
-        p.onStartup()
-        moderator.connects(0)
-        time.sleep(2)
-        print("_"*30)
-        while True:
-            #moderator.says('!blinfo')
-            moderator.says('!blupdate')
-            time.sleep(5)
-
-    #testPlugin1()
-    testPlugin2()
-    #testPluginRoc()
-    #unittest.main()
-    #testETag()
