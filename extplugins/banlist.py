@@ -86,7 +86,11 @@
 # 01/09/2012 - 2.5 - Courgette
 # - reduce I/O access by loading the banlist files into memory and caching check results
 #
-__version__ = '2.5'
+# 02/01/2013 - 2.6 - Courgette
+# add support for banlist of Punkbuster ids
+#
+
+__version__ = '2.6'
 __author__  = 'Courgette'
 
 import urllib2, random, thread, time, string
@@ -167,7 +171,7 @@ class BanlistPlugin(b3.plugin.Plugin):
             try:
                 b = IpBanlist(self, banlistconfig)
                 self._banlists.append(b)
-                self.info("IpBanlist [%s] loaded" % b.name)
+                self.info("IP banlist [%s] loaded" % b.name)
             except Exception, e:
                 self.error(e)
 
@@ -175,7 +179,15 @@ class BanlistPlugin(b3.plugin.Plugin):
             try:
                 b = GuidBanlist(self, banlistconfig)
                 self._banlists.append(b)
-                self.info("GuidBanlist [%s] loaded" % b.name)
+                self.info("Guid banlist [%s] loaded" % b.name)
+            except Exception, e:
+                self.error(e)
+
+        for banlistconfig in self.config.get('pbid_banlist'):
+            try:
+                b = PbidBanlist(self, banlistconfig)
+                self._banlists.append(b)
+                self.info("PBid banlist [%s] loaded" % b.name)
             except Exception, e:
                 self.error(e)
 
@@ -204,6 +216,14 @@ class BanlistPlugin(b3.plugin.Plugin):
                 b = GuidBanlist(self, whitelistconfig)
                 self._whitelists.append(b)
                 self.info("Guid white list [%s] loaded" % b.name)
+            except Exception, e:
+                self.error(e)
+
+        for whitelistconfig in self.config.get('pbid_whitelist'):
+            try:
+                b = PbidBanlist(self, whitelistconfig)
+                self._whitelists.append(b)
+                self.info("PBid white list [%s] loaded" % b.name)
             except Exception, e:
                 self.error(e)
 
@@ -521,6 +541,7 @@ class Banlist(object):
         return self.message.replace('$name','%s'%client.name)\
             .replace('$ip','%s'%client.ip)\
             .replace('$guid','%s'%client.guid)\
+            .replace('$pbid','%s'%client.pbid)\
             .replace('$id','@%s'%client.id)
 
 
@@ -619,7 +640,7 @@ class GuidBanlist(Banlist):
 
         self.refreshBanlistContent()
 
-        if client.ip not in self.cache:
+        if client.guid not in self.cache:
             self.cache[client.guid] = self.isGuidInBanlist(client.guid)
 
         rv, msg = self.cache[client.guid]
@@ -636,6 +657,33 @@ class GuidBanlist(Banlist):
         if m:
             return guid, "guid '%s' matches banlist entry %r (%s %s)" % (guid, m.group('entry'), self.name, self.getHumanModifiedTime())
         return False, "guid '%s' not found in banlist (%s %s)" % (guid, self.name, self.getHumanModifiedTime())
+
+
+class PbidBanlist(Banlist):
+
+    def isBanned(self, client):
+        if client.pbid is None or client.pbid == '':
+            return False
+
+        self.refreshBanlistContent()
+
+        if client.pbid not in self.cache:
+            self.cache[client.pbid] = self.isPbidInBanlist(client.pbid)
+
+        rv, msg = self.cache[client.pbid]
+        if rv:
+            self.plugin.info(msg)
+        else:
+            self.plugin.verbose(msg)
+        return rv
+
+
+    def isPbidInBanlist(self, pbid):
+        re_guid = re.compile(r'''^(?P<entry>\s*%s\b.*)$''' % re.escape(pbid), re.IGNORECASE | re.MULTILINE)
+        m = re_guid.search(self.file_content)
+        if m:
+            return pbid, "PBid '%s' matches banlist entry %r (%s %s)" % (pbid, m.group('entry'), self.name, self.getHumanModifiedTime())
+        return False, "PBid '%s' not found in banlist (%s %s)" % (pbid, self.name, self.getHumanModifiedTime())
 
 
 
