@@ -89,8 +89,11 @@
 # 02/01/2013 - 2.6 - Courgette
 # add support for banlist of Punkbuster ids
 #
+# 12/04/2013 - 2.7 - Courgette
+# add support for IP range for IP ending with ".0.0" and ".0.0.0"
+#
 
-__version__ = '2.6'
+__version__ = '2.7'
 __author__  = 'Courgette'
 
 import urllib2, random, thread, time, string
@@ -611,20 +614,32 @@ class IpBanlist(Banlist):
 
     def isIpInBanlist(self, ip):
         # search the exact ip
-        rStrict = re.compile(r'''^(?P<entry>%s(?:\D|$).*)$''' % re.escape(ip), re.MULTILINE)
+        rStrict = re.compile(r'''^(?P<entry>%s(?:[^\d\n\r].*)?)$''' % re.escape(ip), re.MULTILINE)
         m = rStrict.search(self.file_content)
         if m:
             return ip, "ip '%s' matches banlist entry %r (%s %s)" % (ip, m.group('entry').strip(), self.name, self.getHumanModifiedTime())
 
         # search the ip with .0 at the end
-        rRange = re.compile(r'''^(?P<entry>%s\.0(\D|$).*)$''' % re.escape('.'.join(ip.split('.')[0:3])), re.MULTILINE)
+        rRange = re.compile(r'''^(?P<entry>%s\.0(?:[^\d\n\r].*)?)$''' % re.escape('.'.join(ip.split('.')[0:3])), re.MULTILINE)
         m = rRange.search(self.file_content)
         if m:
             return ip, "ip '%s' matches (by range) banlist entry %r (%s %s)" % (ip, m.group('entry').strip(), self.name, self.getHumanModifiedTime())
 
-        # if force range is set, enfore search by range event if banlist ip are not ending with ".0"
+        # search the ip with .0.0 at the end
+        rRange = re.compile(r'''^(?P<entry>%s\.0\.0(?:[^\d\n\r].*)?)$''' % re.escape('.'.join(ip.split('.')[0:2])), re.MULTILINE)
+        m = rRange.search(self.file_content)
+        if m:
+            return ip, "ip '%s' matches (by range) banlist entry %r (%s %s)" % (ip, m.group('entry').strip(), self.name, self.getHumanModifiedTime())
+
+        # search the ip with .0.0.0 at the end
+        rRange = re.compile(r'''^(?P<entry>%s\.0\.0\.0(?:[^\d\n\r].*)?)$''' % re.escape('.'.join(ip.split('.')[0:1])), re.MULTILINE)
+        m = rRange.search(self.file_content)
+        if m:
+            return ip, "ip '%s' matches (by range) banlist entry %r (%s %s)" % (ip, m.group('entry').strip(), self.name, self.getHumanModifiedTime())
+
+        # if force range is set, enforce search by range even if banlist ip are not ending with ".0"
         if self._forceRange:
-            rForceRange = re.compile(r'''^(?P<entry>%s\..*)$''' % re.escape('.'.join(ip.split('.')[0:3])), re.MULTILINE)
+            rForceRange = re.compile(r'''^(?P<entry>%s\.\d{1,3}(?:[^\d\n\r].*)?)$''' % re.escape('.'.join(ip.split('.')[0:3])), re.MULTILINE)
             m = rForceRange.search(self.file_content)
             if m:
                 return ip, "ip '%s' matches (by forced range) banlist entry %r (%s %s)" % (ip, m.group('entry').strip(), self.name, self.getHumanModifiedTime())

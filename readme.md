@@ -163,6 +163,11 @@ Changelog
 - add support for banlist of Punkbuster ids
 
 
+### 2.7 - 02/01/2013
+
+- add support for IP range for IP ending with ".0.0" and ".0.0.0"
+
+
 
 Support
 -------

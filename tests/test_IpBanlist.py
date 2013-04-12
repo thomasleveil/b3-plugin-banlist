@@ -104,6 +104,8 @@ class Test_IpBanlist(BanlistTestCase):
 11.22.33.0:-1
 22.33.44.0foo
 33.44.55.0
+44.55.0.0
+55.0.0.0
 '''
         def assertBanned(ip, expected_matched_line):
             self.ip_banlist.plugin.info.reset_mock()
@@ -122,6 +124,12 @@ class Test_IpBanlist(BanlistTestCase):
         assertBanned("22.33.44.1", "22.33.44.0foo")
         assertBanned("33.44.55.66", "33.44.55.0")
         assertBanned("33.44.55.6", "33.44.55.0")
+        assertBanned("44.55.0.1", "44.55.0.0")
+        assertBanned("44.55.1.255", "44.55.0.0")
+        assertBanned("44.55.255.255", "44.55.0.0")
+        assertBanned("55.0.0.1", "55.0.0.0")
+        assertBanned("55.41.25.15", "55.0.0.0")
+        assertBanned("55.255.255.255", "55.0.0.0")
 
 
     def test_match_force_range(self):
