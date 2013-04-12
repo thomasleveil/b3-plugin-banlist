@@ -20,7 +20,7 @@ Features :
 ### IP banlists / whitelists :
 
  * specify as many banlist files as you want.
- * understands range ip ban. (ie: IP ending with '.0')
+ * understands range ip ban. (ie: banlist file having IP addresses ending with '.0', '.0.0' or '.0.0.0')
  * option to enfore range IP ban as if all ip addresses where ending with ".0"
  
 ### GUID banlists / whitelists :
