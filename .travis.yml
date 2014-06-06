@@ -6,6 +6,9 @@ python:
 
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
+  - ls -l /home/minion/projects/
+  - ls -l /home/minion/projects/5321e4e2ab1b1981002feb1c/
+  - cat /home/minion/projects/5321e4e2ab1b1981002feb1c/code/run_script
   - pip install -r tests/requirements.txt --use-mirrors
   - pip install -e git+git://github.com/BigBrotherBot/big-brother-bot.git#egg=b3 --use-mirrors
 
