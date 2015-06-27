@@ -13,6 +13,10 @@ GUIDs or PBids.
 It also can work with banlists from Rules of Combat www.rulesofcombat.com
 
 
+******
+*NOTE: since B3 v1.10.1 beta this plugin has been included in the standard plugins set, thus all patches and updates will be performed in the official B3 repository.*
+******
+
 
 Features :
 ----------
